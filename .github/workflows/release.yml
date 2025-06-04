@@ -3,23 +3,28 @@ name: Release to NPM
 on:
   push:
     branches:
-      - 'release-*'
+      - "releases/**"
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: 'https://registry.npmjs.org/'
+          registry-url: "https://registry.npmjs.org/"
+
       - name: Set version from branch name
         run: |
-          VERSION="${GITHUB_REF#refs/heads/release-}"
-          npm version $VERSION --no-git-tag-version
+          VERSION=$(basename "$GITHUB_REF")
+          echo "Publishing version $VERSION"
+          npm version "$VERSION" --no-git-tag-version
+
       - run: npm ci
       - run: npm run build
+
       - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

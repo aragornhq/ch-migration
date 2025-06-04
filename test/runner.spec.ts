@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import { Runner } from "../src/runner";
-import { clickhouse } from "../src/client";
 
 jest.mock("../src/client", () => {
   const data: any[] = [];
