@@ -4,31 +4,23 @@ import { Runner } from './runner';
 import fs from 'fs';
 import path from 'path';
 import figlet from 'figlet';
-import chalk from 'chalk';
 import boxen from 'boxen';
 
 export function printBanner() {
-  const title = figlet.textSync('Aragorn AI', {
-    font: 'Standard',
-    horizontalLayout: 'default',
-    verticalLayout: 'default',
-  });
+  const title = figlet.textSync('Aragorn AI', { font: 'Standard' });
 
-  const description = boxen(
-    chalk.bold.gray(
-      `⚔️  ClickHouse Migration CLI by Aragorn AI\n⚡  Safe • Fast • Typed • Rollback-Supported`,
-    ),
+  const box = boxen(
+    `⚔️  ClickHouse Migration CLI by Aragorn AI\n⚡  Safe • Fast • Typed • Rollback-Supported`,
     {
       padding: 1,
       borderStyle: 'round',
-      borderColor: 'cyan',
       align: 'center',
       margin: 1,
     },
   );
 
-  console.log(chalk.cyanBright(title));
-  console.log(description);
+  console.log(title);
+  console.log(box);
 }
 
 const args = process.argv.slice(2);
