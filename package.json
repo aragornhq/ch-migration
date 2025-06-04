@@ -32,9 +32,13 @@
   "author": "Aragorn AI",
   "license": "MIT",
   "dependencies": {
-    "@clickhouse/client": "^1.11.1"
+    "@clickhouse/client": "^1.11.1",
+    "boxen": "^8.0.1",
+    "chalk": "^5.4.1",
+    "figlet": "^1.8.1"
   },
   "devDependencies": {
+    "@types/figlet": "^1.7.0",
     "@types/jest": "^29.5.14",
     "jest": "^29.7.0",
     "ts-jest": "^29.3.4",

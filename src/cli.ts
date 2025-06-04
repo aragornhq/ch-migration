@@ -1,39 +1,51 @@
 #!/usr/bin/env ts-node
 
-import { Runner } from "./runner";
-import fs from "fs";
-import path from "path";
+import { Runner } from './runner';
+import fs from 'fs';
+import path from 'path';
+import figlet from 'figlet';
+import chalk from 'chalk';
+import boxen from 'boxen';
 
-function printBanner() {
-  console.log(`
-     _                             _        _        _ 
-    / \\   __ _ _ __   __ _ _ __ __| | ___  | |_ __ _| |
-   / _ \\ / _\` | '_ \\ / _\` | '__/ _\` |/ _ \\ | __/ _\` | |
-  / ___ \\ (_| | | | | (_| | | | (_| |  __/ | || (_| | |
- /_/   \\_\\__,_|_| |_|\__, |_|  \__,_|\___|  \__\__,_|_|
-                    |___/                               
-   ┌──────────────────────────────────────────────────┐
-   │        Aragorn AI • ClickHouse Migration CLI     │
-   │      Safe, Fast, Typed, Rollback-Supported ⚔️     │
-   └──────────────────────────────────────────────────┘
-  `);
+export function printBanner() {
+  const title = figlet.textSync('Aragorn AI', {
+    font: 'Standard',
+    horizontalLayout: 'default',
+    verticalLayout: 'default',
+  });
+
+  const description = boxen(
+    chalk.bold.gray(
+      `⚔️  ClickHouse Migration CLI by Aragorn AI\n⚡  Safe • Fast • Typed • Rollback-Supported`,
+    ),
+    {
+      padding: 1,
+      borderStyle: 'round',
+      borderColor: 'cyan',
+      align: 'center',
+      margin: 1,
+    },
+  );
+
+  console.log(chalk.cyanBright(title));
+  console.log(description);
 }
 
 const args = process.argv.slice(2);
 const command = args[0];
 const name = args[1];
-const pathArg = args.find((arg) => arg.startsWith("--path="));
-const fileArg = args.find((arg) => arg.startsWith("--file="));
+const pathArg = args.find((arg) => arg.startsWith('--path='));
+const fileArg = args.find((arg) => arg.startsWith('--file='));
 
-const configPath = path.resolve(process.cwd(), "clickhouse-migration.json");
+const configPath = path.resolve(process.cwd(), 'clickhouse-migration.json');
 const config = fs.existsSync(configPath)
-  ? JSON.parse(fs.readFileSync(configPath, "utf8"))
+  ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
   : {};
-const folderPath = pathArg?.split("=")[1] || config.path;
+const folderPath = pathArg?.split('=')[1] || config.path;
 
 if (!folderPath) {
   console.error(
-    "❌ Error: --path=<folder> is required or must be defined in clickhouse-migration.json"
+    '❌ Error: --path=<folder> is required or must be defined in clickhouse-migration.json',
   );
   process.exit(1);
 }
@@ -43,11 +55,11 @@ const runner = new Runner(folderPath);
 (async () => {
   printBanner();
   try {
-    if (command === "migration:create") {
-      if (!name) throw new Error("Missing migration name");
+    if (command === 'migration:create') {
+      if (!name) throw new Error('Missing migration name');
       const timestamp = new Date()
         .toISOString()
-        .replace(/[-:.TZ]/g, "")
+        .replace(/[-:.TZ]/g, '')
         .slice(0, 14);
       const filename = `${timestamp}_${name}.sql`;
       const fullDir = path.resolve(folderPath);
@@ -55,18 +67,18 @@ const runner = new Runner(folderPath);
       const filePath = path.join(fullDir, filename);
       fs.writeFileSync(
         filePath,
-        `-- ${filename}\n-- SQL up\n\n-- ROLLBACK BELOW --\n-- SQL down\n`
+        `-- ${filename}\n-- SQL up\n\n-- ROLLBACK BELOW --\n-- SQL down\n`,
       );
       console.log(`Created migration: ${filePath}`);
-    } else if (command === "migration:up") {
+    } else if (command === 'migration:up') {
       await runner.applyMigrations();
-    } else if (command === "migration:down") {
-      const filename = fileArg?.split("=")[1];
-      if (!filename) throw new Error("--file=<filename> is required");
+    } else if (command === 'migration:down') {
+      const filename = fileArg?.split('=')[1];
+      if (!filename) throw new Error('--file=<filename> is required');
       await runner.rollbackMigration(filename);
     } else {
       console.log(
-        "Usage:\n  migration:create <name> --path=./migrations\n  migration:up --path=./migrations\n  migration:down --file=filename.sql --path=./migrations"
+        'Usage:\n  migration:create <name> --path=./migrations\n  migration:up --path=./migrations\n  migration:down --file=filename.sql --path=./migrations',
       );
     }
   } catch (err) {
