@@ -3,25 +3,6 @@
 import { Runner } from './runner';
 import fs from 'fs';
 import path from 'path';
-import figlet from 'figlet';
-import boxen from 'boxen';
-
-export function printBanner() {
-  const title = figlet.textSync('Aragorn AI', { font: 'Standard' });
-
-  const box = boxen(
-    `⚔️  ClickHouse Migration CLI by Aragorn AI\n⚡  Safe • Fast • Typed • Rollback-Supported`,
-    {
-      padding: 1,
-      borderStyle: 'round',
-      align: 'center',
-      margin: 1,
-    },
-  );
-
-  console.log(title);
-  console.log(box);
-}
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -45,7 +26,6 @@ if (!folderPath) {
 const runner = new Runner(folderPath);
 
 (async () => {
-  printBanner();
   try {
     if (command === 'migration:create') {
       if (!name) throw new Error('Missing migration name');
