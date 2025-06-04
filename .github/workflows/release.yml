@@ -2,8 +2,8 @@ name: Release to NPM
 
 on:
   push:
-    branches:
-      - "releases/**"
+    tags:
+      - "v*.*.*"
 
 jobs:
   release:
@@ -17,22 +17,14 @@ jobs:
           node-version: 20
           registry-url: "https://registry.npmjs.org/"
 
-      - name: Set version from branch name
+      - name: Set version from tag name
         run: |
-          VERSION=$(basename "$GITHUB_REF")
-          echo "Target release version: $VERSION"
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if [ "$CURRENT_VERSION" != "$VERSION" ]; then
-            npm version "$VERSION" --no-git-tag-version
-          else
-            echo "Version $VERSION already set, skipping version bump"
-          fi
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "Detected tag version: $VERSION"
+          npm version "$VERSION" --no-git-tag-version
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
+      - run: npm ci
+      - run: npm run build
 
       - name: Publish to NPM
         run: npm publish --access public
