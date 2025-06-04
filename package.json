@@ -1,0 +1,37 @@
+{
+  "name": "@aragornhq/clickhouse-migration",
+  "version": "1.0.0",
+  "description": "Production-grade ClickHouse migration CLI with rollback, test coverage, and GitHub Actions support",
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
+  "bin": {
+    "ch-migrate": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "migration:create": "ts-node src/cli.ts migration:create",
+    "migration:up": "ts-node src/cli.ts migration:up",
+    "migration:down": "ts-node src/cli.ts migration:down",
+    "test": "jest"
+  },
+  "keywords": [
+    "clickhouse",
+    "migration",
+    "typescript",
+    "cli",
+    "rollback"
+  ],
+  "author": "Aragorn AI",
+  "license": "MIT",
+  "dependencies": {
+    "@clickhouse/client": "^1.11.1"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
