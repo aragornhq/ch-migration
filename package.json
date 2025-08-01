@@ -1,14 +1,14 @@
 {
-  "name": "@aragornhq/clickhouse-migration",
+  "name": "@aragornhq/ch-migration",
   "version": "1.0.0",
   "description": "Production-grade ClickHouse migration CLI with rollback, test coverage, and GitHub Actions support",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aragornhq/clickhouse-migration.git"
+    "url": "https://github.com/aragornhq/ch-migration.git"
   },
-  "homepage": "https://github.com/aragornhq/clickhouse-migration#readme",
+  "homepage": "https://github.com/aragornhq/ch-migration#readme",
   "bugs": {
-    "url": "https://github.com/aragornhq/clickhouse-migration/issues"
+    "url": "https://github.com/aragornhq/ch-migration/issues"
   },
   "main": "dist/cli.js",
   "types": "dist/cli.d.ts",
