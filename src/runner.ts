@@ -37,7 +37,7 @@ export class Runner {
         try {
           console.log(`🚀 Applying ${file.filename}...`);
 
-          // OPTIONAL: enforce 1 SQL statement per file
+          // Enforce 1 SQL statement per file
           if ((file.upSql.match(/;/g) || []).length > 1) {
             throw new Error(
               `❌ Migration ${file.filename} may contain multiple SQL statements. Use 1 per file.`,

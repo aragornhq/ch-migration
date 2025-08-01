@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { Runner } from "../src/runner";
+import { clickhouse } from "../src/client";
 
 jest.mock("../src/client", () => {
   const data: any[] = [];
@@ -35,6 +37,7 @@ jest.mock("../src/client", () => {
 describe("Migration Runner", () => {
   const testMigrationsDir = path.join(__dirname, "fixtures");
   const runner = new Runner(testMigrationsDir);
+  let expectedHash = "";
 
   beforeAll(() => {
     if (!fs.existsSync(testMigrationsDir)) {
@@ -48,6 +51,9 @@ describe("Migration Runner", () => {
         -- ROLLBACK BELOW --
         DROP TABLE IF EXISTS test_table;`
     );
+
+    const raw = fs.readFileSync(file, "utf8");
+    expectedHash = crypto.createHash("sha256").update(raw).digest("hex");
   });
 
   afterAll(() => {
@@ -58,11 +64,19 @@ describe("Migration Runner", () => {
 
   it("applies migrations", async () => {
     await expect(runner.applyMigrations()).resolves.not.toThrow();
+    expect(clickhouse.insert).toHaveBeenCalledWith({
+      table: "migrations",
+      values: [{ filename: "20250101_test.sql", hash: expectedHash }],
+      format: "JSONEachRow",
+    });
   });
 
   it("rolls back migration", async () => {
     await expect(
       runner.rollbackMigration("20250101_test.sql")
     ).resolves.not.toThrow();
+    expect(clickhouse.command).toHaveBeenCalledWith({
+      query: "ALTER TABLE migrations DELETE WHERE filename = '20250101_test.sql'",
+    });
   });
 });
