@@ -7,6 +7,7 @@ export function getMigrationFiles(dir: string): MigrationFile[] {
   return fs
     .readdirSync(dir)
     .filter((file) => file.endsWith(".sql"))
+    .sort()
     .map((filename) => {
       const filePath = path.join(dir, filename);
       const raw = fs.readFileSync(filePath, "utf8");
