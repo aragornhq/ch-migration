@@ -10,7 +10,7 @@ const name = args[1];
 const pathArg = args.find((arg) => arg.startsWith('--path='));
 const fileArg = args.find((arg) => arg.startsWith('--file='));
 
-const configPath = path.resolve(process.cwd(), 'clickhouse-migration.json');
+const configPath = path.resolve(process.cwd(), 'ch-migration.json');
 const config = fs.existsSync(configPath)
   ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
   : {};
@@ -18,7 +18,7 @@ const folderPath = pathArg?.split('=')[1] || config.path;
 
 if (!folderPath) {
   console.error(
-    '❌ Error: --path=<folder> is required or must be defined in clickhouse-migration.json',
+    '❌ Error: --path=<folder> is required or must be defined in ch-migration.json',
   );
   process.exit(1);
 }

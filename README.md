@@ -1,4 +1,4 @@
-# @aragornhq/clickhouse-migration
+# @aragornhq/ch-migration
 
 > ⚔️ Production-grade CLI for managing ClickHouse schema migrations with raw SQL, rollback, integrity tracking, strict mode, and GitHub automation.
 
@@ -12,14 +12,14 @@
 - ✅ Rollback support using `-- ROLLBACK BELOW --` separator
 - ✅ SHA-256 hash tracking for applied migrations
 - ✅ Enforced one-statement-per-file (recommended)
-- ✅ Optional config via `clickhouse-migration.json`
+- ✅ Optional config via `ch-migration.json`
 
 ---
 
 ## 📦 Installation
 
 ```bash
-npm install --save-dev @aragornhq/clickhouse-migration
+npm install --save-dev @aragornhq/ch-migration
 ```
 
 ## 🔧 Setup
@@ -36,7 +36,7 @@ CLICKHOUSE_PASSWORD=
 CLICKHOUSE_USE_TLS=false
 ```
 
-2. Specify where your migration files live via a `clickhouse-migration.json` file:
+2. Specify where your migration files live via a `ch-migration.json` file:
 
 ```json
 {
@@ -56,7 +56,7 @@ npx ch-migrate <command> [options]
 
 ### Commands
 
-- `migration:create <name> --path=<folder>` – create a timestamped migration file. The `--path` option is optional when the path is defined in `clickhouse-migration.json`.
+- `migration:create <name> --path=<folder>` – create a timestamped migration file. The `--path` option is optional when the path is defined in `ch-migration.json`.
 - `migration:up --path=<folder>` – apply all pending migrations.
 - `migration:down --file=<filename.sql> --path=<folder>` – roll back a single migration.
 
