@@ -50,6 +50,10 @@ describe("Migration Runner", () => {
   const runner = new Runner(testMigrationsDir);
   let expectedHash = "";
 
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   beforeAll(() => {
     if (!fs.existsSync(testMigrationsDir)) {
       fs.mkdirSync(testMigrationsDir);
@@ -98,5 +102,19 @@ describe("Migration Runner", () => {
     expect(content).toContain("CREATE TABLE IF NOT EXISTS dump_table");
     expect(content).not.toMatch(/DROP/i);
     fs.unlinkSync(dumpFile);
+  });
+
+  it("supports dry run", async () => {
+    const dryFile = path.join(testMigrationsDir, "20250102_dry.sql");
+    fs.writeFileSync(
+      dryFile,
+      `CREATE TABLE dry_run (id UInt8) ENGINE = Memory;\n-- ROLLBACK BELOW --\nDROP TABLE dry_run;`
+    );
+
+    await expect(runner.applyMigrations(true)).resolves.not.toThrow();
+    expect(clickhouse.command).not.toHaveBeenCalled();
+    expect(clickhouse.insert).not.toHaveBeenCalled();
+
+    fs.unlinkSync(dryFile);
   });
 });
