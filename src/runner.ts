@@ -1,5 +1,6 @@
 import { clickhouse } from './client';
 import { getMigrationFiles } from './utils';
+import fs from 'fs';
 
 export class Runner {
   constructor(private readonly migrationsDir: string) {}
@@ -93,5 +94,36 @@ export class Runner {
     });
 
     console.log(`✅ Rolled back ${filename}`);
+  }
+
+  async dump(outputFile: string) {
+    const result = await clickhouse.query({
+      query:
+        "SELECT name, create_table_query FROM system.tables WHERE database = currentDatabase()",
+      format: 'JSONEachRow',
+    });
+    const rows = await result.json();
+
+    const statements = rows
+      .filter((r: any) => r.name !== 'migrations')
+      .map((r: any) => {
+        let sql = r.create_table_query as string;
+        sql = sql.replace(
+          /^CREATE\s+TABLE/i,
+          'CREATE TABLE IF NOT EXISTS',
+        );
+        sql = sql.replace(
+          /^CREATE\s+VIEW/i,
+          'CREATE VIEW IF NOT EXISTS',
+        );
+        sql = sql.replace(
+          /^CREATE\s+MATERIALIZED\s+VIEW/i,
+          'CREATE MATERIALIZED VIEW IF NOT EXISTS',
+        );
+        return sql.endsWith(';') ? sql : `${sql};`;
+      });
+
+    fs.writeFileSync(outputFile, statements.join('\n\n') + '\n');
+    console.log(`📝 Dumped schema to ${outputFile}`);
   }
 }

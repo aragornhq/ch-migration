@@ -20,6 +20,7 @@
     "migration:create": "ts-node src/cli.ts migration:create",
     "migration:up": "ts-node src/cli.ts migration:up",
     "migration:down": "ts-node src/cli.ts migration:down",
+    "dump": "ts-node src/cli.ts dump",
     "test": "jest"
   },
   "keywords": [
