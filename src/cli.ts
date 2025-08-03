@@ -9,25 +9,24 @@ const command = args[0];
 const name = args[1];
 const pathArg = args.find((arg) => arg.startsWith('--path='));
 const fileArg = args.find((arg) => arg.startsWith('--file='));
+const outArg = args.find((arg) => arg.startsWith('--out='));
 
 const configPath = path.resolve(process.cwd(), 'ch-migration.json');
 const config = fs.existsSync(configPath)
   ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
   : {};
-const folderPath = pathArg?.split('=')[1] || config.path;
-
-if (!folderPath) {
-  console.error(
-    '❌ Error: --path=<folder> is required or must be defined in ch-migration.json',
-  );
-  process.exit(1);
-}
+const folderPath = pathArg?.split('=')[1] || config.path || '';
 
 const runner = new Runner(folderPath);
 
 (async () => {
   try {
     if (command === 'migration:create') {
+      if (!folderPath) {
+        throw new Error(
+          '--path=<folder> is required or must be defined in ch-migration.json',
+        );
+      }
       if (!name) throw new Error('Missing migration name');
       const timestamp = new Date()
         .toISOString()
@@ -43,14 +42,28 @@ const runner = new Runner(folderPath);
       );
       console.log(`Created migration: ${filePath}`);
     } else if (command === 'migration:up') {
+      if (!folderPath) {
+        throw new Error(
+          '--path=<folder> is required or must be defined in ch-migration.json',
+        );
+      }
       await runner.applyMigrations();
     } else if (command === 'migration:down') {
+      if (!folderPath) {
+        throw new Error(
+          '--path=<folder> is required or must be defined in ch-migration.json',
+        );
+      }
       const filename = fileArg?.split('=')[1];
       if (!filename) throw new Error('--file=<filename> is required');
       await runner.rollbackMigration(filename);
+    } else if (command === 'dump') {
+      const outFile = outArg?.split('=')[1];
+      if (!outFile) throw new Error('--out=<file> is required');
+      await runner.dump(outFile);
     } else {
       console.log(
-        'Usage:\n  migration:create <name> --path=./migrations\n  migration:up --path=./migrations\n  migration:down --file=filename.sql --path=./migrations',
+        'Usage:\n  migration:create <name> --path=./migrations\n  migration:up --path=./migrations\n  migration:down --file=filename.sql --path=./migrations\n  dump --out=dump.sql',
       );
     }
   } catch (err) {

@@ -9,7 +9,18 @@ jest.mock("../src/client", () => {
   return {
     clickhouse: {
       query: jest.fn(({ query }: { query: string }) => {
-        if (query.includes("SELECT")) {
+        if (query.includes("system.tables")) {
+          return Promise.resolve({
+            json: () =>
+              Promise.resolve([
+                {
+                  name: "dump_table",
+                  create_table_query:
+                    "CREATE TABLE dump_table (id UInt8) ENGINE = Memory",
+                },
+              ]),
+          });
+        } else if (query.includes("FROM migrations")) {
           return Promise.resolve({
             json: () => Promise.resolve([...data]),
           });
@@ -78,5 +89,14 @@ describe("Migration Runner", () => {
     expect(clickhouse.command).toHaveBeenCalledWith({
       query: "ALTER TABLE migrations DELETE WHERE filename = '20250101_test.sql'",
     });
+  });
+
+  it("dumps schema", async () => {
+    const dumpFile = path.join(testMigrationsDir, "dump.sql");
+    await expect(runner.dump(dumpFile)).resolves.not.toThrow();
+    const content = fs.readFileSync(dumpFile, "utf8");
+    expect(content).toContain("CREATE TABLE IF NOT EXISTS dump_table");
+    expect(content).not.toMatch(/DROP/i);
+    fs.unlinkSync(dumpFile);
   });
 });
