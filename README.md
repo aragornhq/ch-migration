@@ -9,6 +9,7 @@
 - ✅ Native [ClickHouse](https://clickhouse.com/) support using [`@clickhouse/client`](https://www.npmjs.com/package/@clickhouse/client)
 - ✅ Fully typed CLI (TypeScript)
 - ✅ Supports `migration:create`, `migration:up`, `migration:down`, `dump`
+- ✅ Optional dry run to validate migrations without applying them
 - ✅ Rollback support using `-- ROLLBACK BELOW --` separator
 - ✅ SHA-256 hash tracking for applied migrations
 - ✅ Enforced one-statement-per-file (recommended)
@@ -57,7 +58,7 @@ npx ch-migrate <command> [options]
 ### Commands
 
 - `migration:create <name> --path=<folder>` – create a timestamped migration file. The `--path` option is optional when the path is defined in `ch-migration.json`.
-- `migration:up --path=<folder>` – apply all pending migrations.
+- `migration:up --path=<folder> [--dry-run]` – apply all pending migrations. Use `--dry-run` to preview without applying.
 - `migration:down --file=<filename.sql> --path=<folder>` – roll back a single migration.
 - `dump --out=<file>` – export `CREATE` statements for all tables in the current database. Each statement includes `IF NOT EXISTS` and no `DROP` statements so rerunning is safe.
 

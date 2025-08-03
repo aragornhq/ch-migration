@@ -10,6 +10,7 @@ const name = args[1];
 const pathArg = args.find((arg) => arg.startsWith('--path='));
 const fileArg = args.find((arg) => arg.startsWith('--file='));
 const outArg = args.find((arg) => arg.startsWith('--out='));
+const dryRun = args.includes('--dry-run');
 
 const configPath = path.resolve(process.cwd(), 'ch-migration.json');
 const config = fs.existsSync(configPath)
@@ -47,7 +48,7 @@ const runner = new Runner(folderPath);
           '--path=<folder> is required or must be defined in ch-migration.json',
         );
       }
-      await runner.applyMigrations();
+      await runner.applyMigrations(dryRun);
     } else if (command === 'migration:down') {
       if (!folderPath) {
         throw new Error(
@@ -63,7 +64,7 @@ const runner = new Runner(folderPath);
       await runner.dump(outFile);
     } else {
       console.log(
-        'Usage:\n  migration:create <name> --path=./migrations\n  migration:up --path=./migrations\n  migration:down --file=filename.sql --path=./migrations\n  dump --out=dump.sql',
+        'Usage:\n  migration:create <name> --path=./migrations\n  migration:up --path=./migrations [--dry-run]\n  migration:down --file=filename.sql --path=./migrations\n  dump --out=dump.sql',
       );
     }
   } catch (err) {

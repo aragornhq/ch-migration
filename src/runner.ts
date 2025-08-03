@@ -27,16 +27,22 @@ export class Runner {
     return new Map(rows.map((r: any) => [r.filename, r.hash]));
   }
 
-  async applyMigrations() {
-    await this.ensureTable();
-    const applied = await this.getApplied();
+  async applyMigrations(dryRun = false) {
+    if (!dryRun) {
+      await this.ensureTable();
+    }
+    const applied = await this.getApplied().catch(() => new Map());
     const files = getMigrationFiles(this.migrationsDir);
     const appliedThisRun: any[] = [];
 
     for (const file of files) {
       if (!applied.has(file.filename)) {
         try {
-          console.log(`🚀 Applying ${file.filename}...`);
+          console.log(
+            dryRun
+              ? `📝 [Dry Run] Would apply ${file.filename}...`
+              : `🚀 Applying ${file.filename}...`,
+          );
 
           // Enforce 1 SQL statement per file
           if ((file.upSql.match(/;/g) || []).length > 1) {
@@ -45,37 +51,45 @@ export class Runner {
             );
           }
 
-          await clickhouse.command({ query: file.upSql });
+          if (!dryRun) {
+            await clickhouse.command({ query: file.upSql });
 
-          await clickhouse.insert({
-            table: 'migrations',
-            values: [{ filename: file.filename, hash: file.hash }],
-            format: 'JSONEachRow',
-          });
+            await clickhouse.insert({
+              table: 'migrations',
+              values: [{ filename: file.filename, hash: file.hash }],
+              format: 'JSONEachRow',
+            });
 
-          appliedThisRun.push(file);
+            appliedThisRun.push(file);
+          }
         } catch (err) {
           console.error(`❌ Error applying ${file.filename}, rolling back...`);
 
-          for (const rollback of appliedThisRun.reverse()) {
-            if (rollback.downSql) {
-              try {
-                console.log(`↩️ Rolling back ${rollback.filename}...`);
-                await clickhouse.command({ query: rollback.downSql });
-              } catch (e) {
-                console.warn(`⚠️ Failed rollback for ${rollback.filename}`);
+          if (!dryRun) {
+            for (const rollback of appliedThisRun.reverse()) {
+              if (rollback.downSql) {
+                try {
+                  console.log(`↩️ Rolling back ${rollback.filename}...`);
+                  await clickhouse.command({ query: rollback.downSql });
+                } catch (e) {
+                  console.warn(`⚠️ Failed rollback for ${rollback.filename}`);
+                }
               }
             }
-          }
 
-          throw err;
+            throw err;
+          }
         }
       } else if (applied.get(file.filename) !== file.hash) {
         throw new Error(`❌ Hash mismatch: ${file.filename}`);
       }
     }
 
-    console.log('✅ All migrations applied successfully.');
+    console.log(
+      dryRun
+        ? '🔍 Dry run completed. No migrations were applied.'
+        : '✅ All migrations applied successfully.',
+    );
   }
 
   async rollbackMigration(filename: string) {
