@@ -117,4 +117,30 @@ describe("Migration Runner", () => {
 
     fs.unlinkSync(dryFile);
   });
+
+  it("replaces ${CLUSTER} before applying", async () => {
+    process.env.CLUSTER = "test_cluster";
+    const clusterFile = path.join(testMigrationsDir, "20250103_cluster.sql");
+    const raw =
+      `CREATE DATABASE test ON CLUSTER ${"${CLUSTER}"};\n` +
+      `-- ROLLBACK BELOW --\n` +
+      `DROP DATABASE test ON CLUSTER ${"${CLUSTER}"};`;
+    fs.writeFileSync(clusterFile, raw);
+
+    const replaced = raw.replace(/\$\{CLUSTER\}/g, "test_cluster");
+    const expected = crypto.createHash("sha256").update(replaced).digest("hex");
+
+    await expect(runner.applyMigrations()).resolves.not.toThrow();
+    expect(clickhouse.command).toHaveBeenCalledWith({
+      query: "CREATE DATABASE test ON CLUSTER test_cluster;",
+    });
+    expect(clickhouse.insert).toHaveBeenCalledWith({
+      table: "migrations",
+      values: [{ filename: "20250103_cluster.sql", hash: expected }],
+      format: "JSONEachRow",
+    });
+
+    fs.unlinkSync(clusterFile);
+    delete process.env.CLUSTER;
+  });
 });

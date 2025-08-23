@@ -11,8 +11,22 @@ export function getMigrationFiles(dir: string): MigrationFile[] {
     .map((filename) => {
       const filePath = path.join(dir, filename);
       const raw = fs.readFileSync(filePath, "utf8");
-      const [upSql, downSql] = raw.split(/--\s*ROLLBACK BELOW\s*/i);
-      const hash = crypto.createHash("sha256").update(raw).digest("hex");
+
+      // Replace cluster variable if present
+      const cluster = process.env.CLUSTER;
+      let processed = raw;
+      if (raw.includes("${CLUSTER}")) {
+        if (!cluster) {
+          throw new Error("Environment variable CLUSTER is not set");
+        }
+        processed = raw.replace(/\$\{CLUSTER\}/g, cluster);
+      }
+
+      const [upSql, downSql] = processed.split(/--\s*ROLLBACK BELOW\s*/i);
+      const hash = crypto
+        .createHash("sha256")
+        .update(processed)
+        .digest("hex");
       return {
         filename,
         upSql: upSql.trim(),

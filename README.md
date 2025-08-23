@@ -14,6 +14,7 @@
 - ✅ SHA-256 hash tracking for applied migrations
 - ✅ Enforced one-statement-per-file (recommended)
 - ✅ Optional config via `ch-migration.json`
+- ✅ `${CLUSTER}` placeholder replaced with the `CLUSTER` environment variable
 
 ---
 
