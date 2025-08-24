@@ -4,6 +4,8 @@ import { Runner } from './runner';
 import fs from 'fs';
 import path from 'path';
 
+const CONFIG_FILE = 'ch-migration.json';
+
 const args = process.argv.slice(2);
 const command = args[0];
 const name = args[1];
@@ -12,7 +14,7 @@ const fileArg = args.find((arg) => arg.startsWith('--file='));
 const outArg = args.find((arg) => arg.startsWith('--out='));
 const dryRun = args.includes('--dry-run');
 
-const configPath = path.resolve(process.cwd(), 'ch-migration.json');
+const configPath = path.resolve(process.cwd(), CONFIG_FILE);
 const config = fs.existsSync(configPath)
   ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
   : {};
@@ -25,7 +27,7 @@ const runner = new Runner(folderPath);
     if (command === 'migration:create') {
       if (!folderPath) {
         throw new Error(
-          '--path=<folder> is required or must be defined in ch-migration.json',
+          `--path=<folder> is required or must be defined in ${CONFIG_FILE}`,
         );
       }
       if (!name) throw new Error('Missing migration name');
@@ -45,14 +47,14 @@ const runner = new Runner(folderPath);
     } else if (command === 'migration:up') {
       if (!folderPath) {
         throw new Error(
-          '--path=<folder> is required or must be defined in ch-migration.json',
+          `--path=<folder> is required or must be defined in ${CONFIG_FILE}`,
         );
       }
       await runner.applyMigrations(dryRun);
     } else if (command === 'migration:down') {
       if (!folderPath) {
         throw new Error(
-          '--path=<folder> is required or must be defined in ch-migration.json',
+          `--path=<folder> is required or must be defined in ${CONFIG_FILE}`,
         );
       }
       const filename = fileArg?.split('=')[1];
