@@ -14,7 +14,7 @@
 - ✅ SHA-256 hash tracking for applied migrations
 - ✅ Enforced one-statement-per-file (recommended)
 - ✅ Optional config via `ch-migration.json`
-- ✅ `${CLUSTER}` placeholder replaced with the `CLUSTER` environment variable
+- ✅ `${CH_CLUSTER}` placeholder replaced with the `CH_CLUSTER` environment variable
 
 ---
 
@@ -36,6 +36,8 @@ CH_USER=default
 CH_PASSWORD=
 # set to "true" when using HTTPS
 CH_USE_TLS=false
+# optional: set cluster name for `${CH_CLUSTER}`
+CH_CLUSTER=
 ```
 
 2. Specify where your migration files live via a `ch-migration.json` file:

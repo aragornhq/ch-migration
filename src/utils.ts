@@ -13,13 +13,13 @@ export function getMigrationFiles(dir: string): MigrationFile[] {
       const raw = fs.readFileSync(filePath, "utf8");
 
       // Replace cluster variable if present
-      const cluster = process.env.CLUSTER;
+      const cluster = process.env.CH_CLUSTER;
       let processed = raw;
-      if (raw.includes("${CLUSTER}")) {
+      if (raw.includes("${CH_CLUSTER}")) {
         if (!cluster) {
-          throw new Error("Environment variable CLUSTER is not set");
+          throw new Error("Environment variable CH_CLUSTER is not set");
         }
-        processed = raw.replace(/\$\{CLUSTER\}/g, cluster);
+        processed = raw.replace(/\$\{CH_CLUSTER\}/g, cluster);
       }
 
       const [upSql, downSql] = processed.split(/--\s*ROLLBACK BELOW\s*/i);
