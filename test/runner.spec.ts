@@ -118,16 +118,16 @@ describe("Migration Runner", () => {
     fs.unlinkSync(dryFile);
   });
 
-  it("replaces ${CLUSTER} before applying", async () => {
-    process.env.CLUSTER = "test_cluster";
+  it("replaces ${CH_CLUSTER} before applying", async () => {
+    process.env.CH_CLUSTER = "test_cluster";
     const clusterFile = path.join(testMigrationsDir, "20250103_cluster.sql");
     const raw =
-      `CREATE DATABASE test ON CLUSTER ${"${CLUSTER}"};\n` +
+      `CREATE DATABASE test ON CLUSTER ${"${CH_CLUSTER}"};\n` +
       `-- ROLLBACK BELOW --\n` +
-      `DROP DATABASE test ON CLUSTER ${"${CLUSTER}"};`;
+      `DROP DATABASE test ON CLUSTER ${"${CH_CLUSTER}"};`;
     fs.writeFileSync(clusterFile, raw);
 
-    const replaced = raw.replace(/\$\{CLUSTER\}/g, "test_cluster");
+    const replaced = raw.replace(/\$\{CH_CLUSTER\}/g, "test_cluster");
     const expected = crypto.createHash("sha256").update(replaced).digest("hex");
 
     await expect(runner.applyMigrations()).resolves.not.toThrow();
@@ -141,6 +141,6 @@ describe("Migration Runner", () => {
     });
 
     fs.unlinkSync(clusterFile);
-    delete process.env.CLUSTER;
+    delete process.env.CH_CLUSTER;
   });
 });
