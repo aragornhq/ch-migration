@@ -26,16 +26,16 @@ npm install --save-dev @aragornhq/ch-migration
 
 ## 🔧 Setup
 
-1. Set the ClickHouse connection using environment variables:
+1. Set the ClickHouse connection using environment variables (prefixed with `CH_`):
 
 ```bash
-CLICKHOUSE_HOST=localhost
-CLICKHOUSE_PORT=8123
-CLICKHOUSE_DB=default
-CLICKHOUSE_USER=default
-CLICKHOUSE_PASSWORD=
+CH_HOST=localhost
+CH_PORT=8123
+CH_DB=default
+CH_USER=default
+CH_PASSWORD=
 # set to "true" when using HTTPS
-CLICKHOUSE_USE_TLS=false
+CH_USE_TLS=false
 ```
 
 2. Specify where your migration files live via a `ch-migration.json` file:

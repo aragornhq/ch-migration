@@ -1,12 +1,12 @@
 import { createClient } from '@clickhouse/client';
 
 const options = {
-  host: process.env.CLICKHOUSE_HOST,
-  username: process.env.CLICKHOUSE_USER,
-  password: process.env.CLICKHOUSE_PASSWORD || '',
-  database: process.env.CLICKHOUSE_DB,
-  port: process.env.CLICKHOUSE_PORT,
-  useTls: process.env.CLICKHOUSE_USE_TLS === 'true',
+  host: process.env.CH_HOST,
+  username: process.env.CH_USER,
+  password: process.env.CH_PASSWORD || '',
+  database: process.env.CH_DB,
+  port: process.env.CH_PORT,
+  useTls: process.env.CH_USE_TLS === 'true',
 };
 
 const protocol = options.useTls ? 'https' : 'http';
