@@ -118,9 +118,32 @@ describe("Migration Runner", () => {
     fs.unlinkSync(dryFile);
   });
 
-  it("replaces ${CH_CLUSTER} before applying", async () => {
+  it("creates migrations table with replication when CH_CLUSTER is set", async () => {
+    const dir = path.join(__dirname, "cluster");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    const clusterRunner = new Runner(dir);
     process.env.CH_CLUSTER = "test_cluster";
-    const clusterFile = path.join(testMigrationsDir, "20250103_cluster.sql");
+
+    await expect(clusterRunner.applyMigrations()).resolves.not.toThrow();
+
+    expect(clickhouse.command).toHaveBeenCalledWith({
+      query: expect.stringContaining("ON CLUSTER test_cluster"),
+    });
+    expect(clickhouse.command).toHaveBeenCalledWith({
+      query: expect.stringContaining("ReplicatedReplacingMergeTree"),
+    });
+
+    fs.rmdirSync(dir);
+    delete process.env.CH_CLUSTER;
+  });
+
+  it("replaces ${CH_CLUSTER} before applying", async () => {
+    const dir = path.join(__dirname, "cluster_replace");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    const clusterRunner = new Runner(dir);
+
+    process.env.CH_CLUSTER = "test_cluster";
+    const clusterFile = path.join(dir, "20250103_cluster.sql");
     const raw =
       `CREATE DATABASE test ON CLUSTER ${"${CH_CLUSTER}"};\n` +
       `-- ROLLBACK BELOW --\n` +
@@ -130,7 +153,7 @@ describe("Migration Runner", () => {
     const replaced = raw.replace(/\$\{CH_CLUSTER\}/g, "test_cluster");
     const expected = crypto.createHash("sha256").update(replaced).digest("hex");
 
-    await expect(runner.applyMigrations()).resolves.not.toThrow();
+    await expect(clusterRunner.applyMigrations()).resolves.not.toThrow();
     expect(clickhouse.command).toHaveBeenCalledWith({
       query: "CREATE DATABASE test ON CLUSTER test_cluster;",
     });
@@ -141,6 +164,28 @@ describe("Migration Runner", () => {
     });
 
     fs.unlinkSync(clusterFile);
+    fs.rmdirSync(dir);
+    delete process.env.CH_CLUSTER;
+  });
+
+  it("errors if CREATE TABLE lacks ON CLUSTER or Replicated engine", async () => {
+    const dir = path.join(__dirname, "cluster_invalid");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    const invalidRunner = new Runner(dir);
+    const badFile = path.join(dir, "20250104_bad.sql");
+    fs.writeFileSync(
+      badFile,
+      `CREATE TABLE bad (id UInt8) ENGINE = MergeTree;\n-- ROLLBACK BELOW --\nDROP TABLE bad;`
+    );
+
+    process.env.CH_CLUSTER = "test_cluster";
+    await expect(invalidRunner.applyMigrations()).rejects.toThrow(
+      /must use ON CLUSTER test_cluster and a Replicated engine/
+    );
+    expect(clickhouse.command).not.toHaveBeenCalled();
+
+    fs.unlinkSync(badFile);
+    fs.rmdirSync(dir);
     delete process.env.CH_CLUSTER;
   });
 });

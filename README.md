@@ -15,6 +15,8 @@
 - ✅ Enforced one-statement-per-file (recommended)
 - ✅ Optional config via `ch-migration.json`
 - ✅ `${CH_CLUSTER}` placeholder replaced with the `CH_CLUSTER` environment variable
+- ✅ Uses `ReplicatedReplacingMergeTree` for migration tracking when `CH_CLUSTER` is set
+- ✅ Validates `CREATE TABLE` migrations use `ON CLUSTER` with a `Replicated` engine when `CH_CLUSTER` is set
 
 ---
 

@@ -6,15 +6,31 @@ export class Runner {
   constructor(private readonly migrationsDir: string) {}
 
   private async ensureTable() {
-    await clickhouse.command({
-      query: `
-        CREATE TABLE IF NOT EXISTS migrations (
-          filename String,
-          hash String,
-          applied_at DateTime DEFAULT now()
-        ) ENGINE = MergeTree ORDER BY filename
-      `,
-    });
+    const cluster = process.env.CH_CLUSTER;
+    if (cluster) {
+      await clickhouse.command({
+        query: `
+          CREATE TABLE IF NOT EXISTS migrations ON CLUSTER ${cluster} (
+            filename String,
+            hash String,
+            applied_at DateTime DEFAULT now()
+          ) ENGINE = ReplicatedReplacingMergeTree(
+            '/clickhouse/tables/{shard}/{database}/{table}',
+            '{replica}'
+          ) ORDER BY filename
+        `,
+      });
+    } else {
+      await clickhouse.command({
+        query: `
+          CREATE TABLE IF NOT EXISTS migrations (
+            filename String,
+            hash String,
+            applied_at DateTime DEFAULT now()
+          ) ENGINE = MergeTree ORDER BY filename
+        `,
+      });
+    }
   }
 
   private async getApplied(): Promise<Map<string, string>> {
@@ -28,11 +44,25 @@ export class Runner {
   }
 
   async applyMigrations(dryRun = false) {
+    const files = getMigrationFiles(this.migrationsDir);
+    const cluster = process.env.CH_CLUSTER;
+    if (cluster) {
+      const invalid = files.find(
+        (f) =>
+          /^\s*CREATE\s+TABLE/i.test(f.upSql) &&
+          (!new RegExp(`ON\\s+CLUSTER\\s+${cluster}`, 'i').test(f.upSql) ||
+            !/ENGINE\s*=\s*Replicated/i.test(f.upSql)),
+      );
+      if (invalid) {
+        throw new Error(
+          `❌ Migration ${invalid.filename} must use ON CLUSTER ${cluster} and a Replicated engine when CH_CLUSTER is set`,
+        );
+      }
+    }
     if (!dryRun) {
       await this.ensureTable();
     }
     const applied = await this.getApplied().catch(() => new Map());
-    const files = getMigrationFiles(this.migrationsDir);
     const appliedThisRun: any[] = [];
 
     for (const file of files) {
