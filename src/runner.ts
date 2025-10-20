@@ -1,4 +1,4 @@
-import { clickhouse } from './client';
+import { getClickhouseClient } from './client';
 import { getMigrationFiles } from './utils';
 import fs from 'fs';
 
@@ -6,6 +6,7 @@ export class Runner {
   constructor(private readonly migrationsDir: string) {}
 
   private async ensureTable() {
+    const clickhouse = getClickhouseClient();
     const cluster = process.env.CH_CLUSTER;
     if (cluster) {
       await clickhouse.command({
@@ -34,6 +35,7 @@ export class Runner {
   }
 
   private async getApplied(): Promise<Map<string, string>> {
+    const clickhouse = getClickhouseClient();
     const result = await clickhouse.query({
       query: 'SELECT filename, hash FROM migrations',
       format: 'JSONEachRow',
@@ -82,6 +84,7 @@ export class Runner {
           }
 
           if (!dryRun) {
+            const clickhouse = getClickhouseClient();
             await clickhouse.command({ query: file.upSql });
 
             await clickhouse.insert({
@@ -96,6 +99,7 @@ export class Runner {
           console.error(`❌ Error applying ${file.filename}, rolling back...`);
 
           if (!dryRun) {
+            const clickhouse = getClickhouseClient();
             for (const rollback of appliedThisRun.reverse()) {
               if (rollback.downSql) {
                 try {
@@ -123,6 +127,7 @@ export class Runner {
   }
 
   async rollbackMigration(filename: string) {
+    const clickhouse = getClickhouseClient();
     await this.ensureTable();
     const files = getMigrationFiles(this.migrationsDir);
     const file = files.find((f) => f.filename === filename);
@@ -141,6 +146,7 @@ export class Runner {
   }
 
   async dump(outputFile: string) {
+    const clickhouse = getClickhouseClient();
     const result = await clickhouse.query({
       query:
         "SELECT name, create_table_query FROM system.tables WHERE database = currentDatabase()",

@@ -2,48 +2,51 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { Runner } from "../src/runner";
-import { clickhouse } from "../src/client";
+import { getClickhouseClient } from "../src/client";
 
 jest.mock("../src/client", () => {
   const data: any[] = [];
-  return {
-    clickhouse: {
-      query: jest.fn(({ query }: { query: string }) => {
-        if (query.includes("system.tables")) {
-          return Promise.resolve({
-            json: () =>
-              Promise.resolve([
-                {
-                  name: "dump_table",
-                  create_table_query:
-                    "CREATE TABLE dump_table (id UInt8) ENGINE = Memory",
-                },
-              ]),
-          });
-        } else if (query.includes("FROM migrations")) {
-          return Promise.resolve({
-            json: () => Promise.resolve([...data]),
-          });
-        } else if (query.includes("CREATE TABLE")) {
-          return Promise.resolve();
-        } else if (query.includes("ALTER TABLE")) {
-          const match = query.match(/filename = '(.+)'/);
-          const name = match ? match[1] : "";
-          const index = data.findIndex((d) => d.filename === name);
-          if (index >= 0) data.splice(index, 1);
-          return Promise.resolve();
-        } else {
-          return Promise.resolve();
-        }
-      }),
-      command: jest.fn(({ query }: { query: string }) => Promise.resolve()),
-      insert: jest.fn(({ values }: any) => {
-        data.push(...values);
+  const client = {
+    query: jest.fn(({ query }: { query: string }) => {
+      if (query.includes("system.tables")) {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve([
+              {
+                name: "dump_table",
+                create_table_query:
+                  "CREATE TABLE dump_table (id UInt8) ENGINE = Memory",
+              },
+            ]),
+        });
+      } else if (query.includes("FROM migrations")) {
+        return Promise.resolve({
+          json: () => Promise.resolve([...data]),
+        });
+      } else if (query.includes("CREATE TABLE")) {
         return Promise.resolve();
-      }),
-    },
+      } else if (query.includes("ALTER TABLE")) {
+        const match = query.match(/filename = '(.+)'/);
+        const name = match ? match[1] : "";
+        const index = data.findIndex((d) => d.filename === name);
+        if (index >= 0) data.splice(index, 1);
+        return Promise.resolve();
+      } else {
+        return Promise.resolve();
+      }
+    }),
+    command: jest.fn(({ query }: { query: string }) => Promise.resolve()),
+    insert: jest.fn(({ values }: any) => {
+      data.push(...values);
+      return Promise.resolve();
+    }),
+  };
+  return {
+    getClickhouseClient: jest.fn(() => client),
   };
 });
+
+const clickhouse = getClickhouseClient();
 
 describe("Migration Runner", () => {
   const testMigrationsDir = path.join(__dirname, "fixtures");
