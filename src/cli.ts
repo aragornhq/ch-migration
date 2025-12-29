@@ -1,6 +1,5 @@
 #!/usr/bin/env ts-node
 
-import { Runner } from './runner';
 import fs from 'fs';
 import path from 'path';
 
@@ -20,16 +19,25 @@ const config = fs.existsSync(configPath)
   : {};
 const folderPath = pathArg?.split('=')[1] || config.path || '';
 
-const runner = new Runner(folderPath);
+const ensureFolderPath = () => {
+  if (!folderPath) {
+    throw new Error(
+      `--path=<folder> is required or must be defined in ${CONFIG_FILE}`,
+    );
+  }
+
+  return folderPath;
+};
+
+const getRunner = async () => {
+  const { Runner } = await import('./runner');
+  return new Runner(ensureFolderPath());
+};
 
 (async () => {
   try {
     if (command === 'migration:create') {
-      if (!folderPath) {
-        throw new Error(
-          `--path=<folder> is required or must be defined in ${CONFIG_FILE}`,
-        );
-      }
+      ensureFolderPath();
       if (!name) throw new Error('Missing migration name');
       const timestamp = new Date()
         .toISOString()
@@ -45,24 +53,17 @@ const runner = new Runner(folderPath);
       );
       console.log(`Created migration: ${filePath}`);
     } else if (command === 'migration:up') {
-      if (!folderPath) {
-        throw new Error(
-          `--path=<folder> is required or must be defined in ${CONFIG_FILE}`,
-        );
-      }
+      const runner = await getRunner();
       await runner.applyMigrations(dryRun);
     } else if (command === 'migration:down') {
-      if (!folderPath) {
-        throw new Error(
-          `--path=<folder> is required or must be defined in ${CONFIG_FILE}`,
-        );
-      }
       const filename = fileArg?.split('=')[1];
       if (!filename) throw new Error('--file=<filename> is required');
+      const runner = await getRunner();
       await runner.rollbackMigration(filename);
     } else if (command === 'dump') {
       const outFile = outArg?.split('=')[1];
       if (!outFile) throw new Error('--out=<file> is required');
+      const runner = await getRunner();
       await runner.dump(outFile);
     } else {
       console.log(
