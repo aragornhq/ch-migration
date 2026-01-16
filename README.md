@@ -12,7 +12,7 @@
 - ✅ Optional dry run to validate migrations without applying them
 - ✅ Rollback support using `-- ROLLBACK BELOW --` separator
 - ✅ SHA-256 hash tracking for applied migrations
-- ✅ Enforced one-statement-per-file (recommended)
+- ✅ Supports multiple SQL statements per migration section with ordered rollback
 - ✅ Optional config via `ch-migration.json`
 - ✅ `${CH_CLUSTER}` placeholder replaced with the `CH_CLUSTER` environment variable
 - ✅ Uses `ReplicatedReplacingMergeTree` for migration tracking when `CH_CLUSTER` is set
@@ -67,15 +67,16 @@ npx ch-migrate <command> [options]
 - `migration:down --file=<filename.sql> --path=<folder>` – roll back a single migration.
 - `dump --out=<file>` – export `CREATE` statements for all tables in the current database. Each statement includes `IF NOT EXISTS` and no `DROP` statements so rerunning is safe.
 
-Each file should contain your SQL up statement followed by `-- ROLLBACK BELOW --` and the down statement. Only one SQL statement per section is enforced.
+Each file should contain your SQL up statements followed by `-- ROLLBACK BELOW --` and the down statements. Statements are executed in order; rollbacks run in reverse order.
 
 ```sql
 -- 20250101_create_table.sql
 CREATE TABLE example (id UInt8) ENGINE = MergeTree;
+INSERT INTO example VALUES (1);
 
 -- ROLLBACK BELOW --
+DELETE FROM example WHERE id = 1;
 DROP TABLE example;
 ```
 
 Applied migrations are recorded in a `migrations` table together with a SHA‑256 hash. If a hash changes, the run fails to prevent drift.
-

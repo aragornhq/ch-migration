@@ -158,7 +158,7 @@ describe("Migration Runner", () => {
 
     await expect(clusterRunner.applyMigrations()).resolves.not.toThrow();
     expect(clickhouse.command).toHaveBeenCalledWith({
-      query: "CREATE DATABASE test ON CLUSTER test_cluster;",
+      query: "CREATE DATABASE test ON CLUSTER test_cluster",
     });
     expect(clickhouse.insert).toHaveBeenCalledWith({
       table: "migrations",
@@ -190,5 +190,77 @@ describe("Migration Runner", () => {
     fs.unlinkSync(badFile);
     fs.rmdirSync(dir);
     delete process.env.CH_CLUSTER;
+  });
+
+  it("applies multi-statement migrations in order", async () => {
+    const dir = path.join(__dirname, "multi_statement");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    const multiRunner = new Runner(dir);
+    const multiFile = path.join(dir, "20250105_multi.sql");
+    fs.writeFileSync(
+      multiFile,
+      `CREATE TABLE multi (id UInt8) ENGINE = Memory;\n` +
+        `INSERT INTO multi VALUES (1);\n` +
+        `-- ROLLBACK BELOW --\n` +
+        `DELETE FROM multi WHERE id = 1;\n` +
+        `DROP TABLE multi;`
+    );
+
+    await expect(multiRunner.applyMigrations()).resolves.not.toThrow();
+
+    const commandMock = clickhouse.command as jest.Mock;
+    const queries = commandMock.mock.calls.map(
+      ([arg]: [{ query: string }]) => arg.query
+    );
+    const createIndex = queries.indexOf(
+      "CREATE TABLE multi (id UInt8) ENGINE = Memory"
+    );
+    const insertIndex = queries.indexOf("INSERT INTO multi VALUES (1)");
+    expect(createIndex).toBeGreaterThan(-1);
+    expect(insertIndex).toBeGreaterThan(-1);
+    expect(createIndex).toBeLessThan(insertIndex);
+
+    fs.unlinkSync(multiFile);
+    fs.rmdirSync(dir);
+  });
+
+  it("rolls back multi-statement migrations in reverse order on failure", async () => {
+    const dir = path.join(__dirname, "multi_rollback");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+    const multiRunner = new Runner(dir);
+    const multiFile = path.join(dir, "20250106_multi_fail.sql");
+    fs.writeFileSync(
+      multiFile,
+      `CREATE TABLE multi_fail (id UInt8) ENGINE = Memory;\n` +
+        `INSERT INTO multi_fail VALUES (1);\n` +
+        `-- ROLLBACK BELOW --\n` +
+        `DELETE FROM multi_fail WHERE id = 1;\n` +
+        `DROP TABLE multi_fail;`
+    );
+
+    const commandMock = clickhouse.command as jest.Mock;
+    commandMock.mockImplementation(({ query }: { query: string }) => {
+      if (query === "INSERT INTO multi_fail VALUES (1)") {
+        return Promise.reject(new Error("boom"));
+      }
+      return Promise.resolve();
+    });
+
+    await expect(multiRunner.applyMigrations()).rejects.toThrow("boom");
+    expect(clickhouse.insert).not.toHaveBeenCalled();
+
+    const queries = commandMock.mock.calls.map(
+      ([arg]: [{ query: string }]) => arg.query
+    );
+    const deleteIndex = queries.lastIndexOf(
+      "DELETE FROM multi_fail WHERE id = 1"
+    );
+    const dropIndex = queries.lastIndexOf("DROP TABLE multi_fail");
+    expect(dropIndex).toBeGreaterThan(-1);
+    expect(deleteIndex).toBeGreaterThan(-1);
+    expect(dropIndex).toBeLessThan(deleteIndex);
+
+    fs.unlinkSync(multiFile);
+    fs.rmdirSync(dir);
   });
 });

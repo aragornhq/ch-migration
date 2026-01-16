@@ -5,6 +5,26 @@ import fs from 'fs';
 export class Runner {
   constructor(private readonly migrationsDir: string) {}
 
+  private stripLeadingComments(statement: string) {
+    let trimmed = statement.trimStart();
+    while (trimmed.startsWith("--") || trimmed.startsWith("/*")) {
+      if (trimmed.startsWith("--")) {
+        const nextLine = trimmed.indexOf("\n");
+        if (nextLine === -1) {
+          return "";
+        }
+        trimmed = trimmed.slice(nextLine + 1).trimStart();
+      } else {
+        const endBlock = trimmed.indexOf("*/");
+        if (endBlock === -1) {
+          return "";
+        }
+        trimmed = trimmed.slice(endBlock + 2).trimStart();
+      }
+    }
+    return trimmed;
+  }
+
   private async ensureTable() {
     const clickhouse = getClickhouseClient();
     const cluster = process.env.CH_CLUSTER;
@@ -51,9 +71,16 @@ export class Runner {
     if (cluster) {
       const invalid = files.find(
         (f) =>
-          /^\s*CREATE\s+TABLE/i.test(f.upSql) &&
-          (!new RegExp(`ON\\s+CLUSTER\\s+${cluster}`, 'i').test(f.upSql) ||
-            !/ENGINE\s*=\s*Replicated/i.test(f.upSql)),
+          f.upSql.some((statement) => {
+            const trimmed = this.stripLeadingComments(statement);
+            return (
+              /^\s*CREATE\s+TABLE/i.test(trimmed) &&
+              (!new RegExp(`ON\\s+CLUSTER\\s+${cluster}`, "i").test(
+                statement,
+              ) ||
+                !/ENGINE\s*=\s*Replicated/i.test(statement))
+            );
+          }),
       );
       if (invalid) {
         throw new Error(
@@ -76,16 +103,11 @@ export class Runner {
               : `🚀 Applying ${file.filename}...`,
           );
 
-          // Enforce 1 SQL statement per file
-          if ((file.upSql.match(/;/g) || []).length > 1) {
-            throw new Error(
-              `❌ Migration ${file.filename} may contain multiple SQL statements. Use 1 per file.`,
-            );
-          }
-
           if (!dryRun) {
             const clickhouse = getClickhouseClient();
-            await clickhouse.command({ query: file.upSql });
+            for (const statement of file.upSql) {
+              await clickhouse.command({ query: statement });
+            }
 
             await clickhouse.insert({
               table: 'migrations',
@@ -100,11 +122,27 @@ export class Runner {
 
           if (!dryRun) {
             const clickhouse = getClickhouseClient();
+            if (file.downSql?.length) {
+              console.log(`↩️ Rolling back statements in ${file.filename}...`);
+              for (const rollbackStatement of [...file.downSql].reverse()) {
+                try {
+                  await clickhouse.command({ query: rollbackStatement });
+                } catch (e) {
+                  console.warn(
+                    `⚠️ Failed rollback statement for ${file.filename}`,
+                  );
+                }
+              }
+            }
             for (const rollback of appliedThisRun.reverse()) {
-              if (rollback.downSql) {
+              if (rollback.downSql?.length) {
                 try {
                   console.log(`↩️ Rolling back ${rollback.filename}...`);
-                  await clickhouse.command({ query: rollback.downSql });
+                  for (const rollbackStatement of [
+                    ...rollback.downSql,
+                  ].reverse()) {
+                    await clickhouse.command({ query: rollbackStatement });
+                  }
                 } catch (e) {
                   console.warn(`⚠️ Failed rollback for ${rollback.filename}`);
                 }
@@ -136,7 +174,9 @@ export class Runner {
     if (!file.downSql) throw new Error(`No rollback SQL found in ${filename}`);
 
     console.log(`↩️ Rolling back ${filename}...`);
-    await clickhouse.command({ query: file.downSql });
+    for (const statement of [...file.downSql].reverse()) {
+      await clickhouse.command({ query: statement });
+    }
 
     await clickhouse.command({
       query: `ALTER TABLE migrations DELETE WHERE filename = '${filename}'`,
